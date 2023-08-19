@@ -1,47 +1,59 @@
 #!/usr/bin/bash
+# run with sudo priviligies
 # installing nginx
-sudo apt update -y && sudo apt install nginx -y
-sudo apt autoremove -y
+
+if [ $# -lt 4 ]; then
+    echo "Usage: sudo ./zabbix_installation.sh <version> <DBName> <DBUser> <DBPassword> <port>"
+    exit 1
+fi
+
+version=$1
+DBName=$2
+DBUser=$3
+DBPassword=$4
+Port=$5
+
+ apt update -y &&  apt install nginx -y
+ apt autoremove -y
 
 # get zabbix debian package and adding to the repo
 cd /tmp
-wget https://repo.zabbix.com/zabbix/6.2/ubuntu/pool/main/z/zabbix-release/zabbix-release_6.2-1+ubuntu22.04_all.deb && sudo dpkg -i zabbix-release_6.2-1+ubuntu22.04_all.deb
-sudo apt update -y && sudo apt upgrade -y && sudo apt install zabbix-server-pgsql zabbix-frontend-php zabbix-sql-scripts zabbix-nginx-conf -y
-sudo apt install zabbix-agent -y
-sudo apt autoremove -y
+wget https://repo.zabbix.com/zabbix/${version:0:4}/ubuntu/pool/main/z/zabbix-release/zabbix-release_$version+ubuntu22.04_all.deb &&  dpkg -i zabbix-release_$version+ubuntu22.04_all.deb
+ apt update -y &&  apt upgrade -y &&  apt install zabbix-server-pgsql zabbix-frontend-php zabbix-sql-scripts zabbix-nginx-conf -y
+ apt install zabbix-agent -y
+ apt autoremove -y
 
 # installing php modules for backend purposes
-sudo apt install php8.1-fpm php-pgsql
+ apt install php8.1-fpm php-pgsql
 
 # postgresql database installation, user and database creation also export the schema that uses zabbix
-sudo apt install postgresql postgresql-contrib -y
-sudo -u postgres createuser --pwprompt zabbix
-sudo -u postgres createdb -O zabbix -E Unicode -T template0 zabbix
-zcat /usr/share/doc/zabbix-sql-scripts/postgresql/server.sql.gz | sudo -u zabbix psql zabbix
+apt install postgresql postgresql-contrib -y
+sudo -u postgres createuser --pwprompt "$DBUser"
+sudo -u postgres createdb -O "$DBUser" -E Unicode -T template0 "$DBName"
+zcat /usr/share/doc/zabbix-sql-scripts/postgresql/server.sql.gz | sudo -u "$DBUser" psql "$DBName"
 
 # grafana installation
-sudo apt-get install -y apt-transport-https
-sudo apt-get install -y software-properties-common
-wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+apt-get install -y apt-transport-https
+apt-get install -y software-properties-common
+wget -q -O - https://packages.grafana.com/gpg.key |  apt-key add -
 
 # adding grafana debian repo
-echo "deb https://packages.grafana.com/enterprise/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-sudo apt update -y && sudo apt install grafana-enterprise -y
+echo "deb https://packages.grafana.com/enterprise/deb stable main" |  tee -a /etc/apt/sources.list.d/grafana.list
+apt update -y &&  apt install grafana-enterprise -y
+
+# edit zabbix_server.conf
+echo "DBName=$DBName" >> /etc/zabbix/zabbix_server.conf
+echo "DBUser=$DBUser" >> /etc/zabbix/zabbix_server.conf
+echo "DBPassword=$DBPassword" >> /etc/zabbix/zabbix_server.conf
+
+# edit nginx.conf
+sed -i "s/listen[[:space:]]*80;/listen $Port;/" /etc/zabbix/nginx.conf
 
 # enabling services
-sudo systemctl enable zabbix-agent && sudo systemctl enable zabbix-server
-sudo systemctl enable php8.1-fpm && sudo systemctl enable nginx
-sudo systemctl enable grafana && sudo systemctl start grafana
+systemctl enable zabbix-agent &&  systemctl enable zabbix-server
+systemctl enable php8.1-fpm &&  systemctl enable nginx
+systemctl enable grafana &&  systemctl start grafana
 
 # starting services
-sudo systemctl start zabbix-agent && sudo systemctl start zabbix-server
-sudo systemctl start php8.1-fpm && sudo systemctl start nginx
-username=$(whoami)
-cd /home/$username/
-sudo cp zabbix_server.conf /etc/zabbix/
-sudo cp zabbix_agent.conf /etc/zabbix/
-sudo cp nginx_zabbix.conf /etc/zabbix/nginx.conf
-# sudo nano /etc/zabbix/zabbix_server.conf
-# sudo nano /etc/zabbix/zabbix_agent.conf
-# sudo nano /etc/zabbix/nginx.conf
-# sudo nano /etc/zabbix/php-fpm.conf
+systemctl start zabbix-agent &&  systemctl start zabbix-server
+systemctl start php8.1-fpm &&  systemctl start nginx
