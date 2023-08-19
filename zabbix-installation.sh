@@ -3,7 +3,7 @@
 # installing nginx
 
 if [ $# -lt 4 ]; then
-    echo "Usage: sudo ./zabbix_installation.sh <version> <DBName> <DBUser> <DBPassword> <port>"
+    echo "Usage: sudo ./zabbix-installation.sh <version> <DBName> <DBUser> <DBPassword> <port>"
     exit 1
 fi
 
@@ -32,14 +32,21 @@ sudo -u postgres createuser --pwprompt "$DBUser"
 sudo -u postgres createdb -O "$DBUser" -E Unicode -T template0 "$DBName"
 zcat /usr/share/doc/zabbix-sql-scripts/postgresql/server.sql.gz | sudo -u "$DBUser" psql "$DBName"
 
-# grafana installation
-apt-get install -y apt-transport-https
-apt-get install -y software-properties-common
-wget -q -O - https://packages.grafana.com/gpg.key |  apt-key add -
+# Prompt to install Grafana
+read -p "Do you want to install Grafana? (y/n): " install_grafana
 
-# adding grafana debian repo
-echo "deb https://packages.grafana.com/enterprise/deb stable main" |  tee -a /etc/apt/sources.list.d/grafana.list
-apt update -y &&  apt install grafana-enterprise -y
+if [[ $install_grafana == "y" ]]; then
+    apt-get install -y apt-transport-https
+    apt-get install -y software-properties-common
+    wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -
+
+    # adding grafana debian repo
+    echo "deb https://packages.grafana.com/enterprise/deb stable main" | tee -a /etc/apt/sources.list.d/grafana.list
+    apt update -y && apt install grafana-enterprise -y
+
+    # enabling and starting Grafana service
+    systemctl enable grafana && systemctl start grafana
+fi
 
 # edit zabbix_server.conf
 echo "DBName=$DBName" >> /etc/zabbix/zabbix_server.conf
@@ -52,7 +59,7 @@ sed -i "s/listen[[:space:]]*80;/listen $Port;/" /etc/zabbix/nginx.conf
 # enabling services
 systemctl enable zabbix-agent &&  systemctl enable zabbix-server
 systemctl enable php8.1-fpm &&  systemctl enable nginx
-systemctl enable grafana &&  systemctl start grafana
+# systemctl enable grafana &&  systemctl start grafana
 
 # starting services
 systemctl start zabbix-agent &&  systemctl start zabbix-server
