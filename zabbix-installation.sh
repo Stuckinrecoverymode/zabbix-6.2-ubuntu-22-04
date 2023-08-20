@@ -18,7 +18,7 @@ Port=$5
 
 # get zabbix debian package and adding to the repo
 cd /tmp
-wget https://repo.zabbix.com/zabbix/${version:0:4}/ubuntu/pool/main/z/zabbix-release/zabbix-release_$version+ubuntu22.04_all.deb &&  dpkg -i zabbix-release_$version+ubuntu22.04_all.deb
+wget https://repo.zabbix.com/zabbix/${version:0:3}/ubuntu/pool/main/z/zabbix-release/zabbix-release_$version+ubuntu22.04_all.deb &&  dpkg -i zabbix-release_$version+ubuntu22.04_all.deb
  apt update -y &&  apt upgrade -y &&  apt install zabbix-server-pgsql zabbix-frontend-php zabbix-sql-scripts zabbix-nginx-conf -y
  apt install zabbix-agent -y
  apt autoremove -y
