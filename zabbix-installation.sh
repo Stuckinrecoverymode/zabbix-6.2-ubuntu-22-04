@@ -1,4 +1,5 @@
-#!/usr/bin/bash
+#!/usr/bin/zsh
+# or just use bash instead
 # run with sudo priviligies
 # installing nginx
 
